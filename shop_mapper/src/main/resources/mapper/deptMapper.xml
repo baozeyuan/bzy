@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.admin.mapper.dapt.IDeptMapper">
+
+<!--查看项目信息 -->
+	<select id="findDeptList" resultType="dept">
+		select id,deptName,fatherId,remark from t_dept;
+	</select>
+	<!--添加项目-->
+	<insert id="addDept" parameterType="dept">
+		  <selectKey keyProperty="id" resultType="int" order="AFTER">
+			  select last_insert_id();
+		  </selectKey>
+		  insert into t_dept (deptName,fatherId,remark) values (#{deptName},#{fatherId},#{remark})
+	</insert>
+
+	<!--删除项目-->
+	<delete id="deleteDept">
+		delete from t_dept where id in
+		<foreach collection="list" item="id" open="(" close=")" separator=",">
+			#{id}
+		</foreach>
+	</delete>
+	<!--修改部门-->
+	<update id="updateDept" parameterType="dept">
+		update t_dept set deptName=#{deptName},remark=#{remark} where id=#{id}
+	</update>
+
+	<!--根据选中的节点的子节点id查看子节点信息-->
+	<select id="findChildByChiledId" resultType="dept">
+		select id,deptName,fatherId,remark from t_dept where id in
+		<foreach collection="list" item="id" open="(" close=")" separator=",">
+			#{id}
+		</foreach>
+	</select>
+	<!--根据父节点查看-->
+	<select id="findDeptByFatherId" parameterType="int" resultType="dept">
+		select id,deptName,fatherId,remark from t_dept where fatherId=#{value};
+	</select>
+</mapper>

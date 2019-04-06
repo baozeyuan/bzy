@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.admin.mapper.product.IProductMapper">
+	<!--id对应mapper接口要执行的方法名  -->
+	<!--parameterType传递的参数的类型  product是起的别名 -->
+<!--添加  -->
+	<insert id="addProduct" parameterType="product">
+		<selectKey keyProperty="id" order="AFTER" resultType="int">
+			select last_insert_id()
+		</selectKey>
+	insert into t_product(
+	productName,price,entryTime,updateTime,brandId,productImagePath
+	) values (
+	#{productName},#{productPrice},#{entryTime},#{updateTime},#{brand.id},#{productImagePath}
+	)
+	</insert>
+	<!--将上传的多个图片的相对路径添加数据库图片表中-->
+	<insert id="addProductChildImage" parameterType="productImage">
+		insert into t_images (imagePath,productId) values (#{imagePath},#{productId})
+	</insert>
+<!--如果javaBeen的属性和对应数据库字段不一样时 通过resultMap建立两者之间的映射关系  -->
+	<resultMap id="resultInfo" type="product">
+		<result column="id" property="id"></result>
+		<result column="productName" property="productName"></result>
+		<result column="price" property="productPrice"></result>
+		<result column="entryTime" property="entryTime"></result>
+		<result column="updateTime" property="updateTime"></result>
+		<result column="brandId" property="brand.id"></result>
+		<result column="brandName" property="brand.brandName"></result>
+		<result column="productImagePath" property="productImagePath"></result>
+	</resultMap>
+<!--where条件  -->	
+	<sql id="productWhere">
+		<where>
+			<if test="productName!=null and productName!=''">
+				productName like concat('%',#{productName},'%')
+			</if>
+			<if test="minPrice!=null and minPrice>=0">
+				and price >=#{minPrice}
+			</if>
+			<if test="maxPrice!=null and maxPrice>=0">
+				and price &lt;=#{maxPrice}
+			</if>
+			<if test="minEntryTime!=null">
+				and entryTime >=#{minEntryTime}
+			</if>
+			<if test="maxEntryTime!=null">
+				and entryTime &lt;#{maxEntryTime}
+			</if>
+			<if test="minUpdateTime!=null">
+				and updateTime >=#{minUpdateTime}
+			</if>
+			<if test="maxUpdateTime!=null">
+				and updateTime &lt;#{maxUpdateTime}
+			</if>
+			<if test="brand.id!=null and brand.id!=-1">
+				and brandId =#{brand.id}
+			</if>
+
+		</where>
+	</sql>
+<!--查看  -->	
+	<select id="selectProduct" resultMap="resultInfo" parameterType="product">
+		select ts.* from(
+		select p.id,productName,price,entryTime,updateTime,brandName,productImagePath
+		from t_product p left join t_brand b
+		on p.brandId=b.id
+		<include refid="productWhere"></include>
+		<if test="sortFiled!='' and sortFiled!=null ">
+		order by ${sortFiled} ${sort}
+		</if>
+		<if test="sortFiled=='' or sortFiled==null ">
+		order by p.id desc
+		</if>
+		)
+		 ts limit #{startPos},#{pageSize}
+	</select>
+	<!--查询商品表所有的数据不分页-->
+	<select id="findProductList" resultMap="resultInfo" parameterType="product">
+		select p.id,productName,price,entryTime,updateTime,brandName,productImagePath
+		from t_product p left join t_brand b
+		on p.brandId=b.id
+		<include refid="productWhere"></include>
+	</select>
+<!--删除单条数据  -->	
+	<delete id="deleteProdute" parameterType="int">
+		delete from t_product where id=#{id};
+	</delete>
+<!--批量删除  -->	
+	<delete id="deleteMany">
+		delete from t_product where id in
+		 <foreach collection="list" item="ids" open="(" close=")" separator=",">
+			#{ids}
+		</foreach>		
+	</delete>
+<!-- 修改回显 -->
+	<select id="toUpdateProduct" parameterType="int" resultMap="resultInfo">
+		select id,productName,price,brandId,productImagePath from t_product where id=#{value};
+	</select>
+<!--修改  -->	
+	<update id="updateProduct" parameterType="product">
+		update t_product set
+		 productName=#{productName},price=#{productPrice},updateTime=#{updateTime},brandId=#{brand.id},productImagePath=#{productImagePath}
+		 where id=#{id}
+	</update>
+<!-- 查询总条数 -->
+	<select id="findProductCount" resultType="long" parameterType="product">
+		select count(*)
+		from t_product p left join t_brand b
+		on p.brandId=b.id
+		<include refid="productWhere"></include>
+	</select>
+<!--查看产品子图片图片-->
+	<select id="findProductImage"  resultType="productImage" parameterType="int">
+		select id,imagePath from t_images where productId=#{value}
+	</select>
+	<!--查看商品所有数据-->
+	<select id="productList" resultMap="resultInfo">
+		select p.id,productName,price,productImagePath,brandName
+		from t_product p left join t_brand b on p.brandId=b.id
+	</select>
+</mapper>

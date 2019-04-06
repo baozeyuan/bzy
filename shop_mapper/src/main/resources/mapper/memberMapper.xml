@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.admin.mapper.member.IMemberMapper">
+
+	<!--where条件  -->
+	<sql id="memberWhere">
+		<where>
+			<if test="userName!=null and userName!=''">
+				userName like concat('%',#{userName},'%')
+			</if>
+			<if test="minBirthday!=null">
+				and birthday >=#{minBirthday}
+			</if>
+			<if test="maxBirthday!=null">
+				and birthday  &lt;#{maxBirthday}
+			</if>
+			<if test="areaIds!='' and areaIds!=null">
+				and areaIds like concat(#{areaIds},'%')
+			</if>
+		</where>
+	</sql>
+
+
+
+
+	<!-- 查询总条数 -->
+	<select id="findMemberCount" resultType="long" parameterType="member">
+		select count(*) from t_member
+	<!--	<include refid="memberWhere"></include>-->
+	</select>
+
+
+	<!--查看用户信息  -->
+	<select id="findMemberList" resultType="member" parameterType="member">
+		select ts.* from(
+		select id,userName,password,phone,email,birthday,regTime
+		from t_member
+		<include refid="memberWhere"></include>
+		)ts
+		limit #{startPos},#{pageSize}
+	</select>
+
+
+<!--修改回显-->
+	<select id="findMember" parameterType="int" resultType="member">
+		select id,userName,phone,email,birthday,areaName from t_member where id=#{value}
+	</select>
+
+
+	<!--修改-->
+	<update id="updateMember" parameterType="member">
+		update t_member set userName=#{userName},email=#{email},
+		birthday=#{birthday},areaName=#{areaName},areaIds=#{areaIds} where id=#{id}
+	</update>
+
+</mapper>

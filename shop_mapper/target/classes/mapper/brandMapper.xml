@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.admin.mapper.brand.IBrandMapper">
+<!--动态where条件拼接  -->	
+	<sql id="brandWhere">
+		<where>
+			<if test="brandName!=null and brandName!=''">
+				brandName like concat('%',#{brandName},'%')
+			</if>
+			<if test="minBrandEntryTime!=null">
+				and brandEntryTime >= #{minBrandEntryTime}
+			</if>
+			<if test="maxBrandEntryTime!=null">
+				and brandEntryTime &lt;= #{maxBrandEntryTime}
+			</if>
+			<if test="minBrandUpdateTime!=null">
+				and brandUpdateTime >= #{minBrandUpdateTime}
+			</if>
+			<if test="maxBrandUpdateTime!=null">
+				and brandUpdateTime &lt;= #{maxBrandUpdateTime}
+			</if>
+		</where>
+	</sql>
+<!--查看总条数  -->	
+	<select id="findBrandCount" resultType="long" parameterType="brand">
+		select count(*) from t_brand
+		<include refid="brandWhere"></include>
+	</select>
+<!--查看  -->
+	<select id="findBrand" resultType="brand" parameterType="brand">
+		select t.* from(
+		select id,brandName,brandEntryTime,brandUpdateTime from t_brand 
+		<include refid="brandWhere"></include>
+		<if test="sortFiled!='' and sortFiled!=null ">
+			order by ${sortFiled} ${sort}
+		</if>
+		<if test="sortFiled=='' or sortFiled==null ">
+			order by id desc
+		</if>
+		)t limit #{startPos},#{pageSize}
+	</select>
+<!--修改回显  -->
+	<select id="toUpdateBrand" resultType="brand" parameterType="int">
+		select id,brandName,brandEntryTime,brandUpdateTime from t_brand where id=#{value}
+	</select>
+<!--修改  -->
+	<update id="updateBrand" parameterType="brand">
+		update t_brand set 
+		id=#{id},brandName=#{brandName},brandUpdateTime=#{brandUpdateTime}
+		where id=#{id}
+	</update>
+<!--添加  -->
+	<insert id="addBrand" parameterType="brand">
+		insert into t_brand(
+		brandName,brandEntryTime,brandUpdateTime
+		)values(
+		#{brandName},#{brandEntryTime},#{brandUpdateTime})		
+	</insert>
+<!--删除  -->
+	<delete id="deleteBrand" parameterType="int">
+		delete from t_brand where id=#{value}
+	</delete>
+<!--批量删除  -->
+	<delete id="deleteBatchBrand">
+		delete from t_brand where id in
+		<foreach collection="list" item="ids" open="(" close=")" separator=",">
+			#{ids}
+		</foreach>
+	</delete>
+<!--获取品牌信息  -->
+	<select id="findBrandList" resultType="brand">
+		select id,brandName from t_brand
+	</select>
+</mapper>

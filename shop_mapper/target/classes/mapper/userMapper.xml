@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.admin.mapper.user.IUserMapper">
+	<!--如果javaBeen的属性和对应数据库字段不一样时 通过resultMap建立两者之间的映射关系  -->
+	<resultMap id="resultInfo" type="user">
+		<result column="id" property="id"></result>
+		<result column="userName" property="userName"></result>
+		<result column="password" property="password"></result>
+		<result column="salt" property="salt"></result>
+		<result column="lastLoginTime" property="lastLoginTime"></result>
+		<result column="loginCount" property="loginCount"></result>
+		<result column="errorLoginCount" property="errorLoginCount"></result>
+		<result column="errorLoginTime" property="errorLoginTime"></result>
+		<result column="loginStatus" property="loginStatus"></result>
+		<result column="userRealName" property="userRealName"></result>
+		<result column="birthday" property="birthday"></result>
+		<result column="sex" property="sex"></result>
+		<result column="salary" property="salary"></result>
+		<result column="deptId" property="dept.id"></result>
+		<result column="deptName" property="dept.deptName"></result>
+	</resultMap>
+	<!-- 查询总条数 -->
+	<select id="findUserCount" resultType="long" parameterType="user">
+		select count(*) from
+		t_user u left join t_dept d on u.deptId=d.id
+		<include refid="userWhere"></include>
+	</select>
+	<!--查看用户信息  -->
+
+	<select id="findUserList" resultMap="resultInfo" parameterType="user">
+		select ts.* from(
+		select u.id,userName,password,salt,lastLoginTime,loginCount,errorLoginCount,
+		errorLoginTime,loginStatus,userRealName,birthday,sex,salary,deptName,u.deptId
+		from t_user u left join t_dept d on u.deptId=d.id
+		<include refid="userWhere"></include>
+		order by u.id desc
+		)ts
+		limit #{startPos},#{pageSize}
+	</select>
+	<!--修改回显-->
+	<select id="findUser" parameterType="int" resultMap="resultInfo">
+		select userName,userRealName,birthday,sex,salary,d.deptName,u.deptId
+		from t_user u left join t_dept d on u.deptId=d.id where u.id=#{value}
+	</select>
+	<!--where条件  -->
+	<sql id="userWhere">
+		<where>
+			<if test="userName!=null and userName!=''">
+				userName like concat('%',#{userName},'%')
+			</if>
+			<if test="minBirthday!=null">
+				and birthday >=#{minBirthday}
+			</if>
+			<if test="maxBirthday!=null">
+				and birthday  &lt;#{maxBirthday}
+			</if>
+			<if test="minSalary!=null">
+				and salary >=#{minSalary}
+			</if>
+			<if test="maxSalary!=null">
+				and salary &lt;#{maxSalary}
+			</if>
+			<if test="deptTreeIdList!=null and deptTreeIdList.size()>0">
+				and deptId in
+				<foreach collection="deptTreeIdList" item="deptTreeIds" open="(" close=")" separator=",">
+					 #{deptTreeIds}
+				</foreach>
+			</if>
+		</where>
+	</sql>
+<!--注册用户-->
+	<insert id="addUser" parameterType="user">
+		insert into t_user(
+		userName,password,salt,lastLoginTime,loginCount,userRealName,birthday,sex,salary,deptId
+		) values(
+		#{userName},#{password},#{salt},#{lastLoginTime},#{loginCount},
+		#{userRealName},#{birthday},#{sex},#{salary},#{dept.id}
+		)
+	</insert>
+<!--根据用户名验证信息-->
+	<select id="findUserByUserName" resultType="user" parameterType="string">
+		select u.id,userName,password,salt,lastLoginTime,loginCount,errorLoginCount,
+			errorLoginTime,loginStatus,userRealName,birthday,sex,salary,deptName
+			from t_user u left join t_dept d on u.deptId=d.id
+			where userName=#{value}
+	</select>
+	<!--重置上次登录时间-->
+	<update id="updateLastTime" parameterType="user">
+		update t_user set lastLoginTime=#{lastLoginTime} where id=#{id }
+	</update>
+	<!--登陆次数设置为0-->
+	<update id="updateLoginCount" parameterType="int">
+		update t_user set loginCount=1 where id=#{value}
+	</update>
+	<!--登陆次数设置为一-->
+	<update id="insertLoginCount" parameterType="int">
+		update t_user set loginCount=loginCount+1 where id=#{value}
+	</update>
+<!--当密码输入错误时将错误的登陆次数加1 错误的登陆时间重置当前时间-->
+	<update id="updateErrorLoginCount">
+		update t_user set errorLoginCount=errorLoginCount+1,errorLoginTime=#{currDate} where id=#{id}
+	</update>
+	<!--登陆成功时将错误的登陆次数重置为0-->
+	<update id="updateErrorLoginCountByZero" parameterType="int">
+		update t_user set errorLoginCount=0 where id=#{id}
+	</update>
+
+	<!--将错误的登陆时间重置当前时间 为错误的登陆次数为1-->
+	<update id="insertErrorLoginTimeAndCount">
+		update t_user set errorLoginCount=1,errorLoginTime=#{currDate} where id=#{id}
+	</update>
+	<!--将登陆状态设置为锁定锁定-->
+	<update id="updateLoginStatus">
+		update t_user set loginStatus=1,errorLoginTime=#{currDate} where id=#{id}
+	</update>
+	<!--解锁-->
+	<update id="updateUserLoginStatus" parameterType="int">
+		update t_user set loginStatus=0,errorLoginCount=0 where id=#{id}
+	</update>
+	<!--批量删除用户-->
+	<delete id="deleteBatchUser">
+	delete from t_user where id in
+	<foreach collection="list" item="id" open="(" close=")" separator=",">
+		#{id}
+	</foreach>
+	</delete>
+<!--修改用户-->
+	<update id="updateUser" parameterType="user">
+		update t_user set
+		 userName=#{userName},userRealName=#{userRealName},
+		 birthday=#{birthday},sex=#{sex},salary=#{salary},deptId=#{dept.id}
+		 where id=#{id}
+	</update>
+	<!--批量修改用户所在的部门-->
+	<update id="BatchUpdateUserDept">
+		update t_user set deptId=#{deptId} where id in
+		<foreach collection="idList" item="id" open="(" close=")" separator=",">
+			#{id}
+		</foreach>
+	</update>
+<!--根据部门id查看用户信息-->
+	<select id="findUserByDeptId" resultMap="resultInfo" parameterType="int">
+		select u.id,userName,password,
+			loginStatus,userRealName,birthday,sex,salary,deptName,deptId
+			from t_user u left join t_dept d on u.deptId=d.id
+			where deptId=#{value}
+	</select>
+</mapper>
